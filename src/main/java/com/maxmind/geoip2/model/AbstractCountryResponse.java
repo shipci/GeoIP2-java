@@ -1,9 +1,19 @@
 package com.maxmind.geoip2.model;
 
+import java.io.Externalizable;
 import java.io.IOException;
+import java.io.ObjectInput;
+import java.io.ObjectOutput;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 
+import com.fasterxml.jackson.annotation.JacksonInject;
 import com.fasterxml.jackson.annotation.JsonInclude.Include;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.fasterxml.jackson.databind.DeserializationFeature;
+import com.fasterxml.jackson.databind.InjectableValues;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.maxmind.geoip2.record.Continent;
 import com.maxmind.geoip2.record.Country;
@@ -11,7 +21,7 @@ import com.maxmind.geoip2.record.MaxMind;
 import com.maxmind.geoip2.record.RepresentedCountry;
 import com.maxmind.geoip2.record.Traits;
 
-abstract class AbstractCountryResponse {
+abstract class AbstractCountryResponse implements Externalizable {
     @JsonProperty
     private Continent continent = new Continent();
 
@@ -29,6 +39,10 @@ abstract class AbstractCountryResponse {
 
     @JsonProperty
     private Traits traits = new Traits();
+
+    // We need this for serialization
+    @JacksonInject("locales")
+    private List<String> locales = new ArrayList<String>();
 
     /**
      * @return Continent record for the requested IP address.
@@ -113,5 +127,32 @@ abstract class AbstractCountryResponse {
                         : "")
                 + (this.getTraits() != null ? "getTraits()=" + this.getTraits()
                         : "") + "]";
+    }
+
+    @SuppressWarnings("unchecked")
+    @Override
+    public void readExternal(ObjectInput in) throws IOException,
+            ClassNotFoundException {
+
+        Map<String, Object> state = (Map<String, Object>) in.readObject();
+
+        // XXX - share this code with WS client using static factory method
+        InjectableValues inject = new InjectableValues.Std().addValue(
+                "locales", state.get("locales"));
+        ObjectMapper mapper = new ObjectMapper();
+        mapper.configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES,
+                false);
+
+        mapper.readerForUpdating(this).with(inject)
+                .readValue((String) state.get("response"));
+    }
+
+    @Override
+    public void writeExternal(ObjectOutput out) throws IOException {
+        Map<String, Object> state = new HashMap<String, Object>();
+        state.put("response", this.toJson());
+        state.put("locales", this.locales);
+
+        out.writeObject(state);
     }
 }
