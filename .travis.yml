@@ -10,9 +10,3 @@ install: mvn install -DskipTests=true -Dgpg.skip=true
 
 after_script: mvn cobertura:cobertura coveralls:cobertura
 
-notifications:
-  email:
-    recipients:
-      - dev@maxmind.com
-    on_success: change
-    on_failure: always
