@@ -5,6 +5,8 @@ jdk:
   - oraclejdk7
   - oraclejdk8
 install: mvn install -DskipTests=true -Dgpg.skip=true
+
+
 after_script: mvn cobertura:cobertura coveralls:cobertura
 
 archive: true
